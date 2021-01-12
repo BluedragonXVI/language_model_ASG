@@ -29,3 +29,8 @@ def read_state_df(engine, session_id):
     except:
         df = pd.DataFrame([])
     return df
+
+    if __name__ == '__main__':
+
+        # create PostgreSQL client using configuration file 
+        engine = create_engine
