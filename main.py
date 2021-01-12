@@ -3,6 +3,7 @@ import psycopg2
 import pandas as pd
 from sqlalchemy import create_engine
 from streamlit.report_thread import get_report_ctx
+import config
 
 # get a unique session ID that can used at postgres primary key 
 def get_session_id() -> str:
@@ -15,8 +16,8 @@ def get_session_id() -> str:
 def write_state(column, value, engine, session_id):
     engine.execute("UPDATE %s SET %s='%s'" % (session_id, column, value))
 
-def write_state_df(df, engine, session_id):
-    df.to_sql('%s' % (session_id, engine, index=False, if_exists='replace', chunksize=1000))
+def write_state_df(df:pd.DataFrame, engine, session_id):
+    df.to_sql('%s' % (session_id),engine,index=False,if_exists='replace',chunksize=1000)
 
 def read_state(column, engine, session_id):
     state_var = engine.execute("SELECT %s FROM %s" % (column, session_id))
@@ -30,7 +31,7 @@ def read_state_df(engine, session_id):
         df = pd.DataFrame([])
     return df
 
-    if __name__ == '__main__':
+if __name__ == '__main__':
 
-        # create PostgreSQL client using configuration file 
-        engine = create_engine
+    # create PostgreSQL client using configuration file 
+    engine = create_engine
