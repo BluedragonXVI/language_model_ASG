@@ -52,8 +52,6 @@ if __name__ == '__main__':
     # All code below is from text clustering school project with sklearn of newsgroups data to test working webapp and streamlit plotting 
     # Load newsgroup data and descriptive information
 
-
-
     categories = ['sci.space', 'rec.sport.baseball', 'sci.med', 'rec.autos', 'misc.forsale'] # set desired categories here
     train_data = fetch_20newsgroups(subset='train', categories=categories)
     count_cat = Counter(train_data.target)
