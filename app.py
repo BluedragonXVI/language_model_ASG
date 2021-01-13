@@ -4,18 +4,10 @@ import pandas as pd
 import numpy as np
 from sqlalchemy import create_engine
 from streamlit.report_thread import get_report_ctx
+import altair as alt
+import pydeck as pdk
 import config
-
-# Text clustering libraries:
-from sklearn.datasets import fetch_20newsgroups
-from sklearn.cluster import MiniBatchKMeans
-from collections import Counter
-from collections import Counter
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn import metrics
-from sklearn.preprocessing import Normalizer
-from sklearn.decomposition import TruncatedSVD
-from sklearn.pipeline import make_pipeline
+import os
 
 # get a unique session ID that can used at postgres primary key 
 def get_session_id() -> str:
@@ -43,98 +35,161 @@ def read_state_df(engine, session_id):
         df = pd.DataFrame([])
     return df
 
+# SETTING PAGE CONFIG TO WIDE MODE
+st.set_page_config(layout="wide")
+
+# LOADING DATA
+DATE_TIME = "date/time"
+DATA_URL = (
+    "http://s3-us-west-2.amazonaws.com/streamlit-demo-data/uber-raw-data-sep14.csv.gz"
+)
+
+@st.cache(persist=True)
+def load_data(nrows):
+    data = pd.read_csv(DATA_URL, nrows=nrows)
+    lowercase = lambda x: str(x).lower()
+    data.rename(lowercase, axis="columns", inplace=True)
+    data[DATE_TIME] = pd.to_datetime(data[DATE_TIME])
+    return data
+
+data = load_data(100000)
+
 if __name__ == '__main__':
 
-    # create PostgreSQL client using configuration file 
-    engine = create_engine
-    # End of neural SLAM code
+    # create PostgreSQL client using configuration file
+    username:str = config.username 
+    password:str = config.password
+    db_name:str = config.db_name 
+    engine = create_engine("postgresql+psycopg2://"+username+':'+password+"@localhost:5432/"+db_name)
 
-    # All code below is from text clustering school project with sklearn of newsgroups data to test working webapp and streamlit plotting 
-    # Load newsgroup data and descriptive information
+    # retrieve session ID
+    session_id = get_session_id()
 
-    categories = ['sci.space', 'rec.sport.baseball', 'sci.med', 'rec.autos', 'misc.forsale'] # set desired categories here
-    train_data = fetch_20newsgroups(subset='train', categories=categories)
-    count_cat = Counter(train_data.target)
-    num_docs = 0 # will be updated when items are counted next
-    for cat, size in count_cat.items():
-        print("Category:", train_data.target_names[cat], "Size:", size)
-        num_docs += size
-    print(train_data.filenames.shape) # 2963 of all 5 categories
-    print(train_data.target.shape) # 2963 of all 5 categories
+    # create state tables of session
+    engine.execute("CREATE TABLE IF NOT EXISTS %s (size text)" % (session_id))
+    len_table = engine.execute("SELECT COUNT(*) FROM %s" % (session_id))
+    len_table = len_table.first()[0]
+    if len_table == 0:
+        engine.execute("INSERT INTO %s (size) VALUES ('1')" % (session_id))
 
-    """ Selected categories and their size:
+    # can now create pages
+    page = st.sidebar.selectbox("Select page:", ("Page One", "Page Two", "Page Three"))
 
-    Category: rec.sport.baseball Size: 597
-    Category: sci.med Size: 594
-    Category: rec.autos Size: 594
-    Category: sci.space Size: 593
-    Category: misc.forsale Size: 585
+    read_me_file_name = "README.md"
+    read_me_file_path = os.path.join(os.getcwd(), read_me_file_name)
+    read_me_file = open(read_me_file_path)
+    read_me = read_me_file.read()
 
-    """
+    # page config and actions
+    if page == "Page One":
+        #st.title("Active Neural SLAM Portal")
+        st.markdown(read_me)
+    elif page == "Page Two":
+        size = st.text_input("Matrix size", read_state("size", engine, session_id))
+        write_state("size", size, engine, session_id)
+        size = int(read_state("size", engine, session_id))
 
-    num_features = 5000
-    vectorizer = TfidfVectorizer(max_df=0.5, max_features=num_features, stop_words='english', use_idf=True)
-    train_vector = vectorizer.fit_transform(train_data.data)
-    print("number_of_samples: %d, number_of_features: %d" % train_vector.shape)
-    # number_of_samples: 1190, number_of_features: 1000 
-    # original number of features: 21317
+        if st.button("Click"):
+            data = [[0 for (size) in range((size))] for y in range((size))]
+            df = pd.DataFrame(data)
+            write_state_df(df, engine, session_id + "_df")
 
-    # Create the TF_IDF vectors, cluster and get silhouette coefficient
-    num_clusters = 5
-    tf_cluster_model = MiniBatchKMeans(n_clusters=num_clusters, init='k-means++', max_iter=100, batch_size=5000, n_init=3, verbose=0)
-    tf_cluster_model.fit(train_vector)
-    print("Silhouette Coefficient: %0.3f" % metrics.silhouette_score(train_vector, tf_cluster_model.labels_, sample_size=1000))
-    # Silhouette Coefficient: 0.009
+        if not (read_state_df(engine, session_id + "_df").empty):
+            df = read_state_df(engine, session_id + "_df")
+            st.write(df)
+    elif page == "Page Three":
+        # CREATING FUNCTION FOR MAPS
 
-    order_centroids = tf_cluster_model.cluster_centers_.argsort()[:, ::-1]  # sort and reverse
-    terms = vectorizer.get_feature_names() # feature names from tf_idf vector
+        def map(data, lat, lon, zoom):
+            st.write(pdk.Deck(
+                map_style="mapbox://styles/mapbox/light-v9",
+                initial_view_state={
+                    "latitude": lat,
+                    "longitude": lon,
+                    "zoom": zoom,
+                    "pitch": 50,
+                },
+                layers=[
+                    pdk.Layer(
+                        "HexagonLayer",
+                        data=data,
+                        get_position=["lon", "lat"],
+                        radius=100,
+                        elevation_scale=4,
+                        elevation_range=[0, 1000],
+                        pickable=True,
+                        extruded=True,
+                    ),
+                ]
+            ))
 
-    # print first ten terms from each cluster
-    for i in range(num_clusters):
-        print("\nTop 10 terms in cluster %d:" % i) #replace categories[i] with tf_cluster_model names
-        for ind in order_centroids[i, :10]:  
-            print(' %s' % terms[ind])
+        # LAYING OUT THE TOP SECTION OF THE APP
+        row1_1, row1_2 = st.beta_columns((2,3))
 
-    # Compute homogeneity with newsgroups labels
-    train_labels = train_data.target
-    cluster_labels = tf_cluster_model.labels_
-    print("\nHomogeneity: %0.3f" % metrics.homogeneity_score(train_labels, cluster_labels))
+        with row1_1:
+            st.title("NYC Uber Ridesharing Data")
+            hour_selected = st.slider("Select hour of pickup", 0, 23)
 
-    # Compute purity of the clusters (space, baseball, etc...)
-    # Create the confusion matrix
-    confusion_matrix = metrics.cluster.contingency_matrix(train_labels, cluster_labels)
-    purity = np.sum(np.amax(confusion_matrix, axis=0)) / np.sum(confusion_matrix)
-    count_clusters = Counter(cluster_labels)
-    print("Purity: ", purity, "\nNumber of features: ", num_features, "\nNumber of clusters: ", num_clusters)
-    for cluster, size in count_clusters.items():
-        print("Cluster:", cluster, "Size:", size)
-    
-    # SVD Dimensionality Reduction
-    """As described in: https://scikit-learn.org/stable/auto_examples/text/plot_document_clustering.html#sphx-glr-auto-examples-text-plot-document-clustering-py:
-    Vectorizer results are normalized, which makes KMeans behave as
-    spherical k-means for better results. Since LSA/SVD results are
-    not normalized, we have to redo the normalization."""
+        with row1_2:
+            st.write(
+            """
+            ##
+            Examining how Uber pickups vary over time in New York City's and at its major regional airports.
+            By sliding the slider on the left you can view different slices of time and explore different transportation trends.
+            """)
 
-    svd = TruncatedSVD(75)
-    normalizer = Normalizer(copy=False)
-    lsa = make_pipeline(svd, normalizer)
-    svd_vector = lsa.fit_transform(train_vector)
+        # FILTERING DATA BY HOUR SELECTED
+        data = data[data[DATE_TIME].dt.hour == hour_selected]
 
-    km = MiniBatchKMeans(n_clusters=num_clusters, init='k-means++', n_init=1, init_size=1000, batch_size=1000)
-    km.fit(svd_vector)
+        # LAYING OUT THE MIDDLE SECTION OF THE APP WITH THE MAPS
+        row2_1, row2_2, row2_3, row2_4 = st.beta_columns((2,1,1,1))
 
-    # Reupdate the cluster labels
-    cluster_labels = km.labels_
+        # SETTING THE ZOOM LOCATIONS FOR THE AIRPORTS
+        la_guardia= [40.7900, -73.8700]
+        jfk = [40.6650, -73.7821]
+        newark = [40.7090, -74.1805]
+        zoom_level = 12
+        midpoint = (np.average(data["lat"]), np.average(data["lon"]))
 
-    # Compute purity as in the tf_idf above
-    # Create the confusion matrix
-    confusion_matrix = metrics.cluster.contingency_matrix(train_labels, cluster_labels)
-    purity = np.sum(np.amax(confusion_matrix, axis=0)) / np.sum(confusion_matrix)
-    count_clusters = Counter(cluster_labels)
-    print("Purity: ", purity, "\nNumber of features: ", num_features, "\nNumber of clusters: ", num_clusters)
-    for cluster, size in count_clusters.items():
-        print("Cluster:", cluster, "Size:", size)
+        with row2_1:
+            st.write("**All New York City from %i:00 and %i:00**" % (hour_selected, (hour_selected + 1) % 24))
+            map(data, midpoint[0], midpoint[1], 11)
 
-    explained_variance = svd.explained_variance_ratio_.sum()
-    print("Explained variance of the SVD step: {}%".format(int(explained_variance * 100)))
+        with row2_2:
+            st.write("**La Guardia Airport**")
+            map(data, la_guardia[0],la_guardia[1], zoom_level)
 
+        with row2_3:
+            st.write("**JFK Airport**")
+            map(data, jfk[0],jfk[1], zoom_level)
+
+        with row2_4:
+            st.write("**Newark Airport**")
+            map(data, newark[0],newark[1], zoom_level)
+
+        # FILTERING DATA FOR THE HISTOGRAM
+        filtered = data[
+            (data[DATE_TIME].dt.hour >= hour_selected) & (data[DATE_TIME].dt.hour < (hour_selected + 1))
+            ]
+
+        hist = np.histogram(filtered[DATE_TIME].dt.minute, bins=60, range=(0, 60))[0]
+
+        chart_data = pd.DataFrame({"minute": range(60), "pickups": hist})
+
+        # LAYING OUT THE HISTOGRAM SECTION
+
+        st.write("")
+
+        st.write("**Breakdown of rides per minute between %i:00 and %i:00**" % (hour_selected, (hour_selected + 1) % 24))
+
+        st.altair_chart(alt.Chart(chart_data)
+            .mark_area(
+                interpolate='step-after',
+            ).encode(
+                x=alt.X("minute:Q", scale=alt.Scale(nice=False)),
+                y=alt.Y("pickups:Q"),
+                tooltip=['minute', 'pickups']
+            ).configure_mark(
+                opacity=0.5,
+                color='red'
+            ), use_container_width=True)
