@@ -7,7 +7,12 @@ from streamlit.report_thread import get_report_ctx
 import altair as alt
 import pydeck as pdk
 import config
+import math
 import os
+from bokeh.io import output_file, show
+from bokeh.models import Ellipse, GraphRenderer, StaticLayoutProvider
+from bokeh.palettes import Spectral8
+from bokeh.plotting import figure
 
 # get a unique session ID that can used at postgres primary key 
 def get_session_id() -> str:
@@ -73,18 +78,47 @@ if __name__ == '__main__':
         engine.execute("INSERT INTO %s (size) VALUES ('1')" % (session_id))
 
     # can now create pages
-    page = st.sidebar.selectbox("Select page:", ("Page One", "Page Two", "Page Three"))
+    page = st.sidebar.selectbox("Select page:", ("About", "What is SLAM?", "Active Neural SLAM", "Autonomous Drone Platform"))
 
+    
+    # Import README markdown file 
     read_me_file_name = "README.md"
     read_me_file_path = os.path.join(os.getcwd(), read_me_file_name)
     read_me_file = open(read_me_file_path)
     read_me = read_me_file.read()
+    # Import SLAM info markdown files 
+    WIS_file_name = "WIS.md"
+    WIS_file_path = os.path.join(os.getcwd(), WIS_file_name)
+    WIS_file = open(WIS_file_path)
+    WIS = WIS_file.read()
 
     # page config and actions
-    if page == "Page One":
-        #st.title("Active Neural SLAM Portal")
+    if page == "About":
         st.markdown(read_me)
-    elif page == "Page Two":
+    elif page == "What is SLAM?":
+        st.markdown(WIS)
+        # Create the graphical SLAM model
+        N = 8
+        node_indices = list(range(N))
+        plot = figure(title='Graph Layout Demonstration', x_range=(-1.1,1.1), y_range=(-1.1,1.1), tools='', toolbar_location=None)
+        graph = GraphRenderer()
+        graph.node_renderer.data_source.add(node_indices, 'index')
+        graph.node_renderer.data_source.add(Spectral8, 'color')
+        graph.node_renderer.glyph = Ellipse(height=0.1, width=0.2, fill_color='color')
+        graph.edge_renderer.data_source.data = dict(start=[0]*N, end=node_indices)
+
+        ### start of layout code
+        circ = [i*2*math.pi/8 for i in node_indices]
+        x = [math.cos(i) for i in circ]
+        y = [math.sin(i) for i in circ]
+
+        graph_layout = dict(zip(node_indices, zip(x, y)))
+        graph.layout_provider = StaticLayoutProvider(graph_layout=graph_layout)
+        plot.renderers.append(graph)
+        output_file('graph.html')
+        #show(plot)
+        st.write(plot)
+
         size = st.text_input("Matrix size", read_state("size", engine, session_id))
         write_state("size", size, engine, session_id)
         size = int(read_state("size", engine, session_id))
@@ -97,9 +131,8 @@ if __name__ == '__main__':
         if not (read_state_df(engine, session_id + "_df").empty):
             df = read_state_df(engine, session_id + "_df")
             st.write(df)
-    elif page == "Page Three":
+    elif page == "Active Neural SLAM":
         # CREATING FUNCTION FOR MAPS
-
         def map(data, lat, lon, zoom):
             st.write(pdk.Deck(
                 map_style="mapbox://styles/mapbox/light-v9",
@@ -193,3 +226,6 @@ if __name__ == '__main__':
                 opacity=0.5,
                 color='red'
             ), use_container_width=True)
+
+    if page == "Autonomous Drone Platform":
+        st.title("Autonomous Drone Platform")
