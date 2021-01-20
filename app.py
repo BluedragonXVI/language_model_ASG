@@ -12,11 +12,10 @@ import os
 from bokeh.io import output_file, show
 from bokeh.models import (Ellipse, GraphRenderer, StaticLayoutProvider,
                           BoxSelectTool, Circle, EdgesAndLinkedNodes,
-                          Range1d, Plot, MultiLine)
+                          Range1d, Plot, MultiLine, Label, LabelSet, ColumnDataSource)
 from bokeh.palettes import Spectral8
 from bokeh.plotting import figure, from_networkx
-import networkx as nx # for network graph visualization
-from matplotlib import pyplot as plt
+
 
 # get a unique session ID that can used at postgres primary key 
 def get_session_id() -> str:
@@ -101,28 +100,43 @@ if __name__ == '__main__':
         st.markdown(read_me)
     elif page == "What is SLAM?":
         st.markdown(WIS)
-        N = 10
-        node_indices = list(range(N))
-        plot = figure(title='Graphical Model of the SLAM Problem:', x_range=(0,11), y_range=(2,11), tools='', toolbar_location=None)
+        num_nodes = 10
+        node_coords = [(1,8), (3,10), (6,10), (10,10), (4,8), (8,8), (3,5), (6,5), (10,5), (4,3)]
+        x = [x for x,y in node_coords]
+        y = [y for x,y in node_coords]
+        xs, ys = [0,1,1,2,2,2,3,3,9,9,9], [1,2,6,3,4,7,8,5,6,7,8] # vertices
+        node_labels = ["u[t-1]", "x[t-1]", "x[t]", "x[t+1]", "u[t]", "u[t+1]", "z[t-1]", "z[t]", "z[t+1]", "m"]
+        node_indices = list(range(num_nodes))
+        plot = figure(title='', x_range=(0,11), y_range=(2,11), tools='', toolbar_location=None)
         plot.axis.visible = False
+        plot.background_fill_color = "beige"
+        plot.background_fill_alpha = 0.5
         graph = GraphRenderer()
         graph.node_renderer.data_source.add(node_indices, 'index')
         graph.node_renderer.data_source.add(Spectral8, 'color')
         graph.node_renderer.glyph = Circle(radius=0.7, fill_color="color", line_color="color", fill_alpha=0.5, line_alpha=0.5)
-        graph.edge_renderer.glyph = MultiLine(line_color="#000000", line_width=0.5, line_alpha=0.5)
-        graph.edge_renderer.data_source.data = dict(start=[0]*N, end=node_indices)
-
-        ### start of layout code
-        positions = [(1,8), (3,10), (6,10), (10,10), (4,8), (8,8), (3,5), (6,5), (10,5), (4,3)]
-        x = [x for x,y in positions]
-        y = [y for x,y in positions]
-
+        graph.edge_renderer.glyph = MultiLine(line_color="#000000", line_width=0.7, line_alpha=0.8, line_dash="dashed")
+        graph.edge_renderer.data_source.data = dict(start=xs, end=ys)
+        #graph.edge_renderer.data_source.data = dict(start=[0]*num_nodes, end=node_indices)
+        graph.node_renderer.data_source.data['name'] = node_labels
+        source = ColumnDataSource(data=dict(xs=x, ys=y, names=node_labels))
+        # start of layout code
+        labels = LabelSet(x='xs', y='ys', text='names', level='glyph', x_offset=0, y_offset=0, source=source, render_mode='canvas')
         graph_layout = dict(zip(node_indices, zip(x, y)))
         graph.layout_provider = StaticLayoutProvider(graph_layout=graph_layout)
         plot.renderers.append(graph)
+        selected_circles = plot.circle([1,4,8,3,6,10], [8,8,8,5,5,5])
+        glyphs = selected_circles.glyph
+        glyphs.size = 80
+        glyphs.fill_alpha = 0.5
+        glyphs.line_color = "#060f1c"
+        glyphs.line_dash = [30, 3]
+        glyphs.line_width = 5
+        plot.add_layout(labels)
         st.write(plot)
 
-        size = st.text_input("Matrix size", read_state("size", engine, session_id))
+        # stateful input feature below
+        size = st.text_input("Stateful input for future updates", read_state("size", engine, session_id))
         write_state("size", size, engine, session_id)
         size = int(read_state("size", engine, session_id))
 
@@ -135,100 +149,8 @@ if __name__ == '__main__':
             df = read_state_df(engine, session_id + "_df")
             st.write(df)
     elif page == "Active Neural SLAM":
-        # CREATING FUNCTION FOR MAPS
-        def map(data, lat, lon, zoom):
-            st.write(pdk.Deck(
-                map_style="mapbox://styles/mapbox/light-v9",
-                initial_view_state={
-                    "latitude": lat,
-                    "longitude": lon,
-                    "zoom": zoom,
-                    "pitch": 50,
-                },
-                layers=[
-                    pdk.Layer(
-                        "HexagonLayer",
-                        data=data,
-                        get_position=["lon", "lat"],
-                        radius=100,
-                        elevation_scale=4,
-                        elevation_range=[0, 1000],
-                        pickable=True,
-                        extruded=True,
-                    ),
-                ]
-            ))
-
-        # LAYING OUT THE TOP SECTION OF THE APP
-        row1_1, row1_2 = st.beta_columns((2,3))
-
-        with row1_1:
-            st.title("NYC Uber Ridesharing Data")
-            hour_selected = st.slider("Select hour of pickup", 0, 23)
-
-        with row1_2:
-            st.write(
-            """
-            ##
-            Examining how Uber pickups vary over time in New York City's and at its major regional airports.
-            By sliding the slider on the left you can view different slices of time and explore different transportation trends.
-            """)
-
-        # FILTERING DATA BY HOUR SELECTED
-        data = data[data[DATE_TIME].dt.hour == hour_selected]
-
-        # LAYING OUT THE MIDDLE SECTION OF THE APP WITH THE MAPS
-        row2_1, row2_2, row2_3, row2_4 = st.beta_columns((2,1,1,1))
-
-        # SETTING THE ZOOM LOCATIONS FOR THE AIRPORTS
-        la_guardia= [40.7900, -73.8700]
-        jfk = [40.6650, -73.7821]
-        newark = [40.7090, -74.1805]
-        zoom_level = 12
-        midpoint = (np.average(data["lat"]), np.average(data["lon"]))
-
-        with row2_1:
-            st.write("**All New York City from %i:00 and %i:00**" % (hour_selected, (hour_selected + 1) % 24))
-            map(data, midpoint[0], midpoint[1], 11)
-
-        with row2_2:
-            st.write("**La Guardia Airport**")
-            map(data, la_guardia[0],la_guardia[1], zoom_level)
-
-        with row2_3:
-            st.write("**JFK Airport**")
-            map(data, jfk[0],jfk[1], zoom_level)
-
-        with row2_4:
-            st.write("**Newark Airport**")
-            map(data, newark[0],newark[1], zoom_level)
-
-        # FILTERING DATA FOR THE HISTOGRAM
-        filtered = data[
-            (data[DATE_TIME].dt.hour >= hour_selected) & (data[DATE_TIME].dt.hour < (hour_selected + 1))
-            ]
-
-        hist = np.histogram(filtered[DATE_TIME].dt.minute, bins=60, range=(0, 60))[0]
-
-        chart_data = pd.DataFrame({"minute": range(60), "pickups": hist})
-
-        # LAYING OUT THE HISTOGRAM SECTION
-
-        st.write("")
-
-        st.write("**Breakdown of rides per minute between %i:00 and %i:00**" % (hour_selected, (hour_selected + 1) % 24))
-
-        st.altair_chart(alt.Chart(chart_data)
-            .mark_area(
-                interpolate='step-after',
-            ).encode(
-                x=alt.X("minute:Q", scale=alt.Scale(nice=False)),
-                y=alt.Y("pickups:Q"),
-                tooltip=['minute', 'pickups']
-            ).configure_mark(
-                opacity=0.5,
-                color='red'
-            ), use_container_width=True)
+        st.title("Active Neural SLAM")
+        st.header("Work in progress")
 
     if page == "Autonomous Drone Platform":
         st.title("Autonomous Drone Platform")

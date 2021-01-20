@@ -14,3 +14,4 @@ SLAM is considered a difficult problem for multiple reasons:
 * Incorrectly associating a landmark with a location can be disasterous (e.g. high speed drone crashing into an object/civilian)
 * Although solved for some sensor types and map types (sonar, laser, 2D-maps, small static environments) *visual* SLAM (where camera/images are the only sensor/input) on large dynamic areas is still an open research problem
 
+**Graphical representation of the SLAM problem:** The dashed edges represent causal relationships. The nodes outlined in black are directly observed by the robot/agent, and the agent aims to recover the unobserved nodes.
