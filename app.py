@@ -45,14 +45,6 @@ def read_state_df(engine, session_id):
     return df
 
 @st.cache(persist=True)
-def load_data(nrows):
-    data = pd.read_csv(DATA_URL, nrows=nrows)
-    lowercase = lambda x: str(x).lower()
-    data.rename(lowercase, axis="columns", inplace=True)
-    data[DATE_TIME] = pd.to_datetime(data[DATE_TIME])
-    return data
-
-data = load_data(100000)
 
 if __name__ == '__main__':
 
