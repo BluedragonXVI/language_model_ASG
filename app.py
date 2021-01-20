@@ -10,9 +10,13 @@ import config
 import math
 import os
 from bokeh.io import output_file, show
-from bokeh.models import Ellipse, GraphRenderer, StaticLayoutProvider
+from bokeh.models import (Ellipse, GraphRenderer, StaticLayoutProvider,
+                          BoxSelectTool, Circle, EdgesAndLinkedNodes,
+                          Range1d, Plot, MultiLine)
 from bokeh.palettes import Spectral8
-from bokeh.plotting import figure
+from bokeh.plotting import figure, from_networkx
+import networkx as nx # for network graph visualization
+from matplotlib import pyplot as plt
 
 # get a unique session ID that can used at postgres primary key 
 def get_session_id() -> str:
@@ -97,26 +101,25 @@ if __name__ == '__main__':
         st.markdown(read_me)
     elif page == "What is SLAM?":
         st.markdown(WIS)
-        # Create the graphical SLAM model
-        N = 8
+        N = 10
         node_indices = list(range(N))
-        plot = figure(title='Graph Layout Demonstration', x_range=(-1.1,1.1), y_range=(-1.1,1.1), tools='', toolbar_location=None)
+        plot = figure(title='Graphical Model of the SLAM Problem:', x_range=(0,11), y_range=(2,11), tools='', toolbar_location=None)
+        plot.axis.visible = False
         graph = GraphRenderer()
         graph.node_renderer.data_source.add(node_indices, 'index')
         graph.node_renderer.data_source.add(Spectral8, 'color')
-        graph.node_renderer.glyph = Ellipse(height=0.1, width=0.2, fill_color='color')
+        graph.node_renderer.glyph = Circle(radius=0.7, fill_color="color", line_color="color", fill_alpha=0.5, line_alpha=0.5)
+        graph.edge_renderer.glyph = MultiLine(line_color="#000000", line_width=0.5, line_alpha=0.5)
         graph.edge_renderer.data_source.data = dict(start=[0]*N, end=node_indices)
 
         ### start of layout code
-        circ = [i*2*math.pi/8 for i in node_indices]
-        x = [math.cos(i) for i in circ]
-        y = [math.sin(i) for i in circ]
+        positions = [(1,8), (3,10), (6,10), (10,10), (4,8), (8,8), (3,5), (6,5), (10,5), (4,3)]
+        x = [x for x,y in positions]
+        y = [y for x,y in positions]
 
         graph_layout = dict(zip(node_indices, zip(x, y)))
         graph.layout_provider = StaticLayoutProvider(graph_layout=graph_layout)
         plot.renderers.append(graph)
-        output_file('graph.html')
-        #show(plot)
         st.write(plot)
 
         size = st.text_input("Matrix size", read_state("size", engine, session_id))
@@ -229,3 +232,5 @@ if __name__ == '__main__':
 
     if page == "Autonomous Drone Platform":
         st.title("Autonomous Drone Platform")
+        st.header("Work in progress")
+        
