@@ -16,6 +16,7 @@ from bokeh.models import (Ellipse, GraphRenderer, StaticLayoutProvider,
 from bokeh.palettes import Spectral8
 from bokeh.plotting import figure, from_networkx
 
+
 # get the database URL from heroku app
 DATABASE_URL = os.environ['DATABASE_URL']
 # get a unique session ID that can used at postgres primary key 
@@ -43,8 +44,6 @@ def read_state_df(engine, session_id):
     except:
         df = pd.DataFrame([])
     return df
-
-@st.cache(persist=True)
 
 if __name__ == '__main__':
 
