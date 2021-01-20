@@ -6,7 +6,7 @@ from sqlalchemy import create_engine
 from streamlit.report_thread import get_report_ctx
 import altair as alt
 import pydeck as pdk
-import config
+#import config
 import math
 import os
 from bokeh.io import output_file, show
@@ -16,7 +16,8 @@ from bokeh.models import (Ellipse, GraphRenderer, StaticLayoutProvider,
 from bokeh.palettes import Spectral8
 from bokeh.plotting import figure, from_networkx
 
-
+# get the database URL from heroku app
+DATABASE_URL = os.environ['DATABASE_URL']
 # get a unique session ID that can used at postgres primary key 
 def get_session_id() -> str:
     session_id = get_report_ctx().session_id
@@ -43,15 +44,6 @@ def read_state_df(engine, session_id):
         df = pd.DataFrame([])
     return df
 
-# SETTING PAGE CONFIG TO WIDE MODE
-st.set_page_config(layout="wide")
-
-# LOADING DATA
-DATE_TIME = "date/time"
-DATA_URL = (
-    "http://s3-us-west-2.amazonaws.com/streamlit-demo-data/uber-raw-data-sep14.csv.gz"
-)
-
 @st.cache(persist=True)
 def load_data(nrows):
     data = pd.read_csv(DATA_URL, nrows=nrows)
@@ -68,7 +60,7 @@ if __name__ == '__main__':
     username:str = config.username 
     password:str = config.password
     db_name:str = config.db_name 
-    engine = create_engine("postgresql+psycopg2://"+username+':'+password+"@localhost:5432/"+db_name)
+    engine = create_engine(DATABASE_URL, connect_args={'sslmode':'require'})
 
     # retrieve session ID
     session_id = get_session_id()
