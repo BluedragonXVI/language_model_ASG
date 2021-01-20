@@ -57,9 +57,9 @@ data = load_data(100000)
 if __name__ == '__main__':
 
     # create PostgreSQL client using configuration file
-    username:str = config.username 
-    password:str = config.password
-    db_name:str = config.db_name 
+    #username:str = config.username 
+    #password:str = config.password
+    #db_name:str = config.db_name 
     engine = create_engine(DATABASE_URL, connect_args={'sslmode':'require'})
 
     # retrieve session ID
