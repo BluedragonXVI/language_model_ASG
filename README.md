@@ -1,4 +1,5 @@
 # Language Models as Automated Scenario Generators for Medical Education
+### Paul Chung, Michael Boodoo, Andrew Y. Lee, Matthew Giangola, Simona Doboli
 
 #### This is an educational webapp designed to serve 3 purposes:
 
