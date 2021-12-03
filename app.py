@@ -64,7 +64,8 @@ if __name__ == '__main__':
         engine.execute("INSERT INTO %s (size) VALUES ('1')" % (session_id))
 
     # can now create pages
-    page = st.sidebar.selectbox("Select page:", ("About", "What is SLAM?", "Active Neural SLAM", "Autonomous Drone Platform"))
+    #page = st.sidebar.selectbox("Select page:", ("About", "What is SLAM?", "Active Neural SLAM", "Autonomous Drone Platform"))
+    page = st.sidebar.selectbox("Select page:", ("About", "Language Models", "Evaluation"))
 
     
     # Import README markdown file 
