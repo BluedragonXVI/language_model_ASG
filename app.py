@@ -4,17 +4,12 @@ import pandas as pd
 import numpy as np
 from sqlalchemy import create_engine
 from streamlit.report_thread import get_report_ctx
-import altair as alt
 import pydeck as pdk
-#import config
+from datasets import load_dataset
+from transformers import AutoTokenizer, AutoModelForCausalLM
 import math
 import os
-from bokeh.io import output_file, show
-from bokeh.models import (Ellipse, GraphRenderer, StaticLayoutProvider,
-                          BoxSelectTool, Circle, EdgesAndLinkedNodes,
-                          Range1d, Plot, MultiLine, Label, LabelSet, ColumnDataSource)
-from bokeh.palettes import Spectral8
-from bokeh.plotting import figure, from_networkx
+
 
 
 # get the database URL from heroku app
