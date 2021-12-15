@@ -90,26 +90,8 @@ if __name__ == '__main__':
             list_seq = seq.split(' ') # convert 1 seq to multiple words
             input_seq = list_seq[:3]
             input_seq = ' '.join(input_seq)
-            print(f"Input_seq is: {input_seq}")
-            """
-            seq_ids = word_lvl_tokenizer.encode(input_seq, return_tensors='pt')
-            out_wft = top_p_output_wft = word_lvl_model_finetuned.generate(
-                seq_ids, 
-                do_sample=True, 
-                max_length=20, 
-                top_p=0.5, 
-                top_k=0,
-                return_dict_in_generate=True,
-                output_scores=True,
-                forced_eos_token_id=word_lvl_tokenizer.eos_token_id,
-                repetition_penalty=3.0,
-                length_penalty=1.0,
-                num_return_seqs=1
-            )
-            word_lvl_ft_outs.append(word_lvl_tokenizer.decode(out_wft[0][0]))
-            print(f"Word level fine tuned:\n {word_lvl_tokenizer.decode(out_wft[0][0])}")
-            print(f"Token probs:\n {scores_4[0].softmax(dim=1)}")
-            """
+            st.write(f"Input_seq is: {input_seq}")
+            
         
         
         # stateful input feature below
