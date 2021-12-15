@@ -10,7 +10,20 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 import math
 import os
 
+# Get validation sequences path
+valid_seqs_name = "valid_noestart.txt"
+valid_seqs_path = os.path.join(os.getcwd(), valid_seqs_name)
+#valid_seqs_file = open(valid_seqs_path)
 
+# Load validation dataset to sample/generate from
+start_idx = 0
+end_idx = 10
+datasets = load_dataset("text", data_files={"validation": valid_seqs_path})
+datasetseq = list(datasets['validation'][start_idx:end_idx].values())[0]
+
+# Load trained GPT2 model and tokenizer
+word_lvl_model_finetuned = AutoModelForCausalLM.from_pretrained('dracoglacius/NTDB-GPT2')
+word_lvl_tokenizer = AutoModelForCausalLM.from_pretrained('dracoglacius/NTDB-GPT2')
 
 # get the database URL from heroku app
 DATABASE_URL = os.environ['DATABASE_URL']
@@ -59,21 +72,44 @@ if __name__ == '__main__':
         engine.execute("INSERT INTO %s (size) VALUES ('1')" % (session_id))
 
     # can now create pages
-    #page = st.sidebar.selectbox("Select page:", ("About", "What is SLAM?", "Active Neural SLAM", "Autonomous Drone Platform"))
     page = st.sidebar.selectbox("Select page:", ("About", "Language Models", "Evaluation"))
 
-    
     # Import README markdown file 
     read_me_file_name = "README.md"
     read_me_file_path = os.path.join(os.getcwd(), read_me_file_name)
     read_me_file = open(read_me_file_path)
     read_me = read_me_file.read()
-
-
+    
     if page == "About":
         st.markdown(read_me)
         
     elif page == "Language Models":
+        st.write("NTDB-GPT2 Model Generation")
+        st.write("Some validation sequences:\n")#, datasetseq)
+        for idx, seq in enumerate(datasetseq, start_idx+1):
+            list_seq = seq.split(' ') # convert 1 seq to multiple words
+            input_seq = list_seq[:3]
+            input_seq = ' '.join(input_seq)
+            print(f"Input_seq is: {input_seq}")
+            seq_ids = word_lvl_tokenizer.encode(input_seq, return_tensors='pt')
+            out_wft = top_p_output_wft = word_lvl_model_finetuned.generate(
+                seq_ids, 
+                do_sample=True, 
+                max_length=20, 
+                top_p=0.5, 
+                top_k=0,
+                return_dict_in_generate=True,
+                output_scores=True,
+                forced_eos_token_id=word_lvl_tokenizer.eos_token_id,
+                repetition_penalty=3.0,
+                length_penalty=1.0,
+                num_return_seqs=1
+            )
+            word_lvl_ft_outs.append(word_lvl_tokenizer.decode(out_wft[0][0]))
+            print(f"Word level fine tuned:\n {word_lvl_tokenizer.decode(out_wft[0][0])}")
+            print(f"Token probs:\n {scores_4[0].softmax(dim=1)}")
+        
+        
         # stateful input feature below
         size = st.text_input("Stateful input for future updates", read_state("size", engine, session_id))
         write_state("size", size, engine, session_id)
