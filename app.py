@@ -6,7 +6,7 @@ from sqlalchemy import create_engine
 from streamlit.report_thread import get_report_ctx
 import pydeck as pdk
 from datasets import load_dataset
-from transformers import AutoTokenizer, AutoModelForCausalLM
+#from transformers import AutoTokenizer, AutoModelForCausalLM
 import math
 import os
 
@@ -22,8 +22,8 @@ datasets = load_dataset("text", data_files={"validation": valid_seqs_path})
 datasetseq = list(datasets['validation'][start_idx:end_idx].values())[0]
 
 # Load trained GPT2 model and tokenizer
-word_lvl_model_finetuned = AutoModelForCausalLM.from_pretrained('dracoglacius/NTDB-GPT2')
-word_lvl_tokenizer = AutoModelForCausalLM.from_pretrained('dracoglacius/NTDB-GPT2')
+#word_lvl_model_finetuned = AutoModelForCausalLM.from_pretrained('dracoglacius/NTDB-GPT2')
+#word_lvl_tokenizer = AutoModelForCausalLM.from_pretrained('dracoglacius/NTDB-GPT2')
 
 # get the database URL from heroku app
 DATABASE_URL = os.environ['DATABASE_URL']
@@ -91,6 +91,7 @@ if __name__ == '__main__':
             input_seq = list_seq[:3]
             input_seq = ' '.join(input_seq)
             print(f"Input_seq is: {input_seq}")
+            """
             seq_ids = word_lvl_tokenizer.encode(input_seq, return_tensors='pt')
             out_wft = top_p_output_wft = word_lvl_model_finetuned.generate(
                 seq_ids, 
@@ -108,6 +109,7 @@ if __name__ == '__main__':
             word_lvl_ft_outs.append(word_lvl_tokenizer.decode(out_wft[0][0]))
             print(f"Word level fine tuned:\n {word_lvl_tokenizer.decode(out_wft[0][0])}")
             print(f"Token probs:\n {scores_4[0].softmax(dim=1)}")
+            """
         
         
         # stateful input feature below
