@@ -3,12 +3,15 @@ import psycopg2
 import pandas as pd
 import numpy as np
 from sqlalchemy import create_engine
+from sqlalchemy.types import Integer
 from streamlit.report_thread import get_report_ctx
 import pydeck as pdk
 from datasets import load_dataset
+import codecs
 #from transformers import AutoTokenizer, AutoModelForCausalLM
 import math
 import os
+import re
 
 # Get validation sequences path
 valid_seqs_name = "valid_noestart.txt"
@@ -22,10 +25,10 @@ datasets = load_dataset("text", data_files={"validation": valid_seqs_path})
 datasetseq = list(datasets['validation'][start_idx:end_idx].values())[0]
 
 # Load trained GPT2 model and tokenizer
-#word_lvl_model_finetuned = AutoModelForCausalLM.from_pretrained('dracoglacius/NTDB-GPT2')
-#word_lvl_tokenizer = AutoModelForCausalLM.from_pretrained('dracoglacius/NTDB-GPT2')
+# word_lvl_model_finetuned = AutoModelForCausalLM.from_pretrained('dracoglacius/NTDB-GPT2')
+# word_lvl_tokenizer = AutoModelForCausalLM.from_pretrained('dracoglacius/NTDB-GPT2')
 
-# get the database URL from heroku app
+# Get the database URL from heroku app
 DATABASE_URL = os.environ['DATABASE_URL']
 # get a unique session ID that can used at postgres primary key 
 def get_session_id() -> str:
@@ -34,12 +37,34 @@ def get_session_id() -> str:
     session_id = '_id_' + session_id # postgres name convention
     return session_id
 
+""" Just add the already processed dictionary rather than rebuilding it here
+
+# Get icd9 pcode and dcode files
+icd9_dcode_name = "icd9_dcodes.txt"
+icd9_pcode_name = "icd9_pcodes.txt"
+icd9_dcode_path = os.path.join(os.getcwd(), icd9_dcode_name)
+icd9_pcode_path = os.path.join(os.getcwd(), icd9_pcode_name)
+
+# Functions to translate ICD9 sequences
+icd9_dcode_list = []
+with codecs.open(icd9_dcode_path, 'r', 'latin-1') as f:
+    for line in f:
+        processed_line = line.split()
+        icd9_dcode_list.append(processed_line)
+
+icd9_pcode_list = []
+with codecs.open(icd9_pcode_path, 'r', 'latin-1') as f:
+    for line in f:
+        processed_line = line.split()
+        icd9_pcode_list.append(processed_line)
+"""
+
 # functions to read/write states of user input and dataframes
 def write_state(column, value, engine, session_id):
     engine.execute("UPDATE %s SET %s='%s'" % (session_id, column, value))
 
 def write_state_df(df:pd.DataFrame, engine, session_id):
-    df.to_sql('%s' % (session_id),engine,index=False,if_exists='replace',chunksize=1000)
+    df.to_sql('%s' % (session_id),engine,index=False,if_exists='replace',chunksize=1000, dtype={str(session_id): Integer()})
 
 def read_state(column, engine, session_id):
     state_var = engine.execute("SELECT %s FROM %s" % (column, session_id))
@@ -86,21 +111,26 @@ if __name__ == '__main__':
     elif page == "Language Models":
         st.write("NTDB-GPT2 Model Generation")
         st.write("Some validation sequences:\n")#, datasetseq)
-        for idx, seq in enumerate(datasetseq, start_idx+1):
+        for idx, seq in enumerate(datasetseq[:3], start_idx+1):
             list_seq = seq.split(' ') # convert 1 seq to multiple words
-            input_seq = list_seq[:3]
-            input_seq = ' '.join(input_seq)
-            st.write(f"Input_seq is: {input_seq}")
+            #input_seq = list_seq[:3]
+            #input_seq = ' '.join(input_seq)
+            st.write(seq[1:-1]) # exclude start/end in output
             
         
         
         # stateful input feature below
-        size = st.text_input("Stateful input for future updates", read_state("size", engine, session_id))
-        write_state("size", size, engine, session_id)
-        size = int(read_state("size", engine, session_id))
+        clin_loe = st.text_input("What is your clinical level of experience?", read_state("size", engine, session_id))
+        seq_1_plaus = st.number_input("From a scale of 0-10, how plausible is sequence 1?", read_state("size", engine, session_id))
+        seq_2_plaus = st.number_input("From a scale of 0-10, how plausible is sequence 2?", read_state("size", engine, session_id))
+        seq_3_plaus = st.number_input("From a scale of 0-10, how plausible is sequence 3?", read_state("size", engine, session_id))
+        data = {session_id:[seq_1_plaus,seq_2_plaus,seq_3_plaus]}
+        write_state("size", data, engine, session_id)
+        #size = int(read_state("size", engine, session_id))
 
         if st.button("Click"):
-            data = [[0 for (size) in range((size))] for y in range((size))]
+            #data = [[0 for (size) in range((size))] for y in range((size))]
+            data = {session_id:[seq_1_plaus,seq_2_plaus,seq_3_plaus]}
             df = pd.DataFrame(data)
             write_state_df(df, engine, session_id + "_df")
 
