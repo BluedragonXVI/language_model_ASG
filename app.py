@@ -37,28 +37,6 @@ def get_session_id() -> str:
     session_id = '_id_' + session_id # postgres name convention
     return session_id
 
-""" Just add the already processed dictionary rather than rebuilding it here
-
-# Get icd9 pcode and dcode files
-icd9_dcode_name = "icd9_dcodes.txt"
-icd9_pcode_name = "icd9_pcodes.txt"
-icd9_dcode_path = os.path.join(os.getcwd(), icd9_dcode_name)
-icd9_pcode_path = os.path.join(os.getcwd(), icd9_pcode_name)
-
-# Functions to translate ICD9 sequences
-icd9_dcode_list = []
-with codecs.open(icd9_dcode_path, 'r', 'latin-1') as f:
-    for line in f:
-        processed_line = line.split()
-        icd9_dcode_list.append(processed_line)
-
-icd9_pcode_list = []
-with codecs.open(icd9_pcode_path, 'r', 'latin-1') as f:
-    for line in f:
-        processed_line = line.split()
-        icd9_pcode_list.append(processed_line)
-"""
-
 # functions to read/write states of user input and dataframes
 def write_state(column, value, engine, session_id):
     engine.execute("UPDATE %s SET %s='%s'" % (session_id, column, value))
@@ -120,10 +98,10 @@ if __name__ == '__main__':
         
         
         # stateful input feature below
-        clin_loe = st.text_input("What is your clinical level of experience?", read_state("size", engine, session_id))
-        seq_1_plaus = st.number_input("From a scale of 0-10, how plausible is sequence 1?", read_state("size", engine, session_id))
-        seq_2_plaus = st.number_input("From a scale of 0-10, how plausible is sequence 2?", read_state("size", engine, session_id))
-        seq_3_plaus = st.number_input("From a scale of 0-10, how plausible is sequence 3?", read_state("size", engine, session_id))
+        clin_loe = st.text_input("What is your clinical level of experience?", min_value=0,max_value=10, on_change=read_state("size", engine, session_id))
+        seq_1_plaus = st.slider("From a scale of 0-10, how plausible is sequence 1?", read_state("size", engine, session_id))
+        seq_2_plaus = st.slider("From a scale of 0-10, how plausible is sequence 2?", read_state("size", engine, session_id))
+        seq_3_plaus = st.slider("From a scale of 0-10, how plausible is sequence 3?", read_state("size", engine, session_id))
         data = {session_id:[seq_1_plaus,seq_2_plaus,seq_3_plaus]}
         write_state("size", data, engine, session_id)
         #size = int(read_state("size", engine, session_id))
@@ -141,5 +119,4 @@ if __name__ == '__main__':
     elif page == "Evaluation":
         st.header("Work in progress")
 
-  
-        
+   
