@@ -102,7 +102,7 @@ if __name__ == '__main__':
         seq_1_plaus = st.slider("From a scale of 0-10, how plausible is sequence 1?", min_value=0,max_value=10)
         seq_2_plaus = st.slider("From a scale of 0-10, how plausible is sequence 2?", min_value=0,max_value=10)
         seq_3_plaus = st.slider("From a scale of 0-10, how plausible is sequence 3?", min_value=0,max_value=10)
-        data = {session_id:[seq_1_plaus,seq_2_plaus,seq_3_plaus]}
+        data = {session_id:[clin_loe,seq_1_plaus,seq_2_plaus,seq_3_plaus]}
         #write_state("size", data, engine, session_id)
         #size = int(read_state("size", engine, session_id))
 
