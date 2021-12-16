@@ -108,7 +108,7 @@ if __name__ == '__main__':
 
         if st.button("Click"):
             #data = [[0 for (size) in range((size))] for y in range((size))]
-            data = {session_id:[seq_1_plaus,seq_2_plaus,seq_3_plaus]}
+            #data = {session_id:[seq_1_plaus,seq_2_plaus,seq_3_plaus]}
             df = pd.DataFrame(data)
             write_state_df(df, engine, session_id + "_df")
 
