@@ -99,9 +99,9 @@ if __name__ == '__main__':
         
         # stateful input feature below
         clin_loe = st.text_input("What is your clinical level of experience?")
-        seq_1_plaus = st.slider("From a scale of 0-10, how plausible is sequence 1?", read_state("size", engine, session_id))
-        seq_2_plaus = st.slider("From a scale of 0-10, how plausible is sequence 2?", read_state("size", engine, session_id))
-        seq_3_plaus = st.slider("From a scale of 0-10, how plausible is sequence 3?", read_state("size", engine, session_id))
+        seq_1_plaus = st.slider("From a scale of 0-10, how plausible is sequence 1?", min_value=0,max_value=10, on_change=read_state("size", engine, session_id))
+        seq_2_plaus = st.slider("From a scale of 0-10, how plausible is sequence 2?", min_value=0,max_value=10, on_change=read_state("size", engine, session_id))
+        seq_3_plaus = st.slider("From a scale of 0-10, how plausible is sequence 3?", min_value=0,max_value=10, on_change=read_state("size", engine, session_id))
         data = {session_id:[seq_1_plaus,seq_2_plaus,seq_3_plaus]}
         write_state("size", data, engine, session_id)
         #size = int(read_state("size", engine, session_id))
@@ -119,4 +119,5 @@ if __name__ == '__main__':
     elif page == "Evaluation":
         st.header("Work in progress")
 
-   
+  
+        
