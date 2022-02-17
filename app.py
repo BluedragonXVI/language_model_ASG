@@ -6,7 +6,7 @@ import numpy as np
 from sqlalchemy import create_engine
 from sqlalchemy.types import Integer
 from streamlit.report_thread import get_report_ctx
-from streamlit.report_thread import add_script_run_ctx
+#from streamlit.report_thread import add_script_run_ctx
 import pydeck as pdk
 from datasets import load_dataset
 import pymongo
