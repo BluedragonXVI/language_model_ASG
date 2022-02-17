@@ -5,7 +5,8 @@ import pandas as pd
 import numpy as np
 from sqlalchemy import create_engine
 from sqlalchemy.types import Integer
-from streamlit.report_thread import get_report_ctx
+#from streamlit.report_thread import get_report_ctx
+from streamlit.report_thread import add_script_run_ctx
 import pydeck as pdk
 from datasets import load_dataset
 import pymongo
@@ -61,7 +62,7 @@ client = pymongo.MongoClient("mongodb+srv://stemmler:project@stemmlerproject.zqs
 
 # Get a unique session ID that can used at postgres primary key 
 def get_session_id() -> str:
-    session_id = get_report_ctx().session_id
+    session_id = add_script_run_ctx().session_id
     session_id = session_id.replace('-','_')
     session_id = '_id_' + session_id # postgres name convention
     return session_id
