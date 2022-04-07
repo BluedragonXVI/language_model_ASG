@@ -13,6 +13,7 @@ import pymongo
 from pymongo import MongoClient
 import codecs
 import pickle
+import json
 import requests
 import math
 import os
@@ -21,6 +22,14 @@ import re
 # Load NTDB-GPT-2 model through huggingface API
 API_URL = "https://api-inference.huggingface.co/models/dracoglacius/NTDB-GPT2"
 headers = {"Authorization": "Bearer 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"}
+
+eval_file = open("/home/dracoglacius/language_model_ASG/clinical_eval.json", 'r')
+data = json.loads(eval_file.read())
+data_labels = [val['label'] for val in data] # will be sent to database
+data = [val['seq'] for val in data]
+
+
+
 
 def query(payload):
 	response = requests.post(API_URL, headers=headers, json=payload)
@@ -46,12 +55,16 @@ with open(pcode_dict_path, "rb") as fp:
 start_idx = 0
 end_idx = 10
 datasets = load_dataset("text", data_files={"validation": valid_seqs_path})
-datasetseq = list(datasets['validation'][:].values())[0]
-datasetseq = datasetseq[:1000]
+
+
+#datasetseq = list(datasets['validation'][:].values())[0]
+#datasetseq = datasetseq[:1000]
+datasetseq = data
+
 dataset_len = len(datasetseq)
 if 'seq_samples' not in st.session_state:
     st.session_state.seq_samples = random.sample(range(dataset_len-5), 3)
-cleaned_datasetseq = [seq.split() for seq in datasetseq]
+#cleaned_datasetseq = [seq.split() for seq in datasetseq]
 
 # MongoDB connection for sending userfeedback to 
 client = pymongo.MongoClient("mongodb+srv://stemmler:project@stemmlerproject.zqsgu.mongodb.net/StemmlerProject?retryWrites=true&w=majority")
@@ -110,10 +123,10 @@ def remove_period_from_seq_and_translate(list_seq, translations, dcode_dict, pco
     translation = translate_dpcode_seq(list_seq, pstart_idx, dcode_dict, pcode_dict)
     translations.append(translation)
 
-my_translations = []
-for seq in cleaned_datasetseq:
-    my_translations.append(seq[1:-1])
-    remove_period_from_seq_and_translate(seq, my_translations, icd9_dcode_dict, icd9_pcode_dict)
+my_translations = datasetseq
+#for seq in cleaned_datasetseq:
+#    my_translations.append(seq[1:-1])
+#    remove_period_from_seq_and_translate(seq, my_translations, icd9_dcode_dict, icd9_pcode_dict)
 
 if __name__ == '__main__':
  
@@ -147,8 +160,8 @@ if __name__ == '__main__':
 
     elif page == "Inference":
         st.subheader("Here are some sample sequences to generate from:")
-        for seq in cleaned_datasetseq[3:]:
-            st.text(' '.join(seq))
+        #for seq in cleaned_datasetseq[3:]:
+            #st.text(' '.join(seq))
         query_str = st.text_input("Enter a sequence stub starting with <START> ECODE ...")
         if st.button("Generate"):
             output = query(query_str)
@@ -164,7 +177,7 @@ if __name__ == '__main__':
     elif page == "Evaluation":
         clin_loe = st.selectbox('What is your clinical level of education?',
         ('Medical Student', 'Resident/Fellow', 'Attending'))
-        st.subheader("Given the presented injury, do the following diagnosis and procedures make clinical sense? Rate the 3 sequences below!\n")
+        st.subheader("Given the following stem consisting of an presenting injury (START) and diagnosis (DXS) do the following procedures (PRS) make clinical sense? Rate the 3 sequences below! (If no procedures are listed, is lack of surgical intervention a valid outcome?)\n")
         col_1, col_2 = st.columns(2)
         rated_seqs = []
         #seq_samples = random.sample(range(dataset_len-5), 3)
@@ -172,10 +185,12 @@ if __name__ == '__main__':
             if seq % 2 == 1:
                 st.session_state.seq_samples[idx] += 1
         #st.write(seq_samples)
+        idxs = []
         for idx in st.session_state.seq_samples:
+            idxs.append(idx)
             list_seq = my_translations[idx] 
             list_trans = my_translations[idx+1]
-            rated_seqs.append({"seq_"+str(idx)+":":list_seq})
+            rated_seqs.append({"label:"+str(data_labels[idx])+"_seq_"+str(idx)+":":list_seq})
             #rated_trans.append(list_trans)
             #input_seq = list_seq[:3]
             #input_seq = ' '.join(input_seq)
@@ -183,13 +198,13 @@ if __name__ == '__main__':
                 with col_1:
                     st.header(f"Sequence {idx}:")
                     st.write(list_seq) # exclude start/end in output
-                with col_2:
-                    st.header(f"Translation {idx}:")
-                    st.write(list_trans)
+                #with col_2:
+                    #st.header(f"Translation {idx}:")
+                    #st.write(list_trans)
             
-        seq_1_plaus = st.slider("From a scale of 0-10, how plausible is sequence 1?", min_value=0,max_value=10)
-        seq_2_plaus = st.slider("From a scale of 0-10, how plausible is sequence 2?", min_value=0,max_value=10)
-        seq_3_plaus = st.slider("From a scale of 0-10, how plausible is sequence 3?", min_value=0,max_value=10)
+        seq_1_plaus = st.slider(f"From a scale of 0-10, how plausible is sequence {idxs[0]}?", min_value=0,max_value=10)
+        seq_2_plaus = st.slider(f"From a scale of 0-10, how plausible is sequence {idxs[1]}?", min_value=0,max_value=10)
+        seq_3_plaus = st.slider(f"From a scale of 0-10, how plausible is sequence {idxs[2]}?", min_value=0,max_value=10)
         data = {session_id:[clin_loe,seq_1_plaus,seq_2_plaus,seq_3_plaus]}
         #write_state("size", data, engine, session_id)
         #size = int(read_state("size", engine, session_id))
