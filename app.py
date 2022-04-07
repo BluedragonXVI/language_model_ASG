@@ -23,7 +23,7 @@ import re
 API_URL = "https://api-inference.huggingface.co/models/dracoglacius/NTDB-GPT2"
 headers = {"Authorization": "Bearer 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"}
 
-eval_file = open("/home/dracoglacius/language_model_ASG/clinical_eval.json", 'r')
+eval_file = open("clinical_eval.json", 'r')
 data = json.loads(eval_file.read())
 data_labels = [val['label'] for val in data] # will be sent to database
 data = [val['seq'] for val in data]
