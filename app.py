@@ -182,8 +182,7 @@ if __name__ == '__main__':
         rated_seqs = []
         #seq_samples = random.sample(range(dataset_len-5), 3)
         for idx, seq in enumerate(st.session_state.seq_samples):
-            if seq % 2 == 1:
-                st.session_state.seq_samples[idx] += 1
+            st.session_state.seq_samples[idx] += 1
         #st.write(seq_samples)
         idxs = []
         for idx in st.session_state.seq_samples:
