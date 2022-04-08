@@ -180,15 +180,15 @@ if __name__ == '__main__':
         st.subheader("Given the following stem consisting of an presenting injury (START) and diagnosis (DXS) do the following procedures (PRS) make clinical sense? Rate the 3 sequences below! (If no procedures are listed, is lack of surgical intervention a valid outcome?)\n")
         col_1, col_2 = st.columns(2)
         rated_seqs = []
-        #seq_samples = random.sample(range(dataset_len-5), 3)
-        for idx, seq in enumerate(st.session_state.seq_samples):
-            st.session_state.seq_samples[idx] += 1
+        #seq_samples = random.sample(range(dataset_len), 3)
+        #for idx, seq in enumerate(st.session_state.seq_samples):
+        #   st.session_state.seq_samples[idx] += 1
         #st.write(seq_samples)
         idxs = []
         for idx in st.session_state.seq_samples:
             idxs.append(idx)
             list_seq = my_translations[idx] 
-            list_trans = my_translations[idx+1]
+            #list_trans = my_translations[idx+1]
             rated_seqs.append({"label:"+str(data_labels[idx])+"_seq_"+str(idx)+":":list_seq})
             #rated_trans.append(list_trans)
             #input_seq = list_seq[:3]
@@ -196,7 +196,8 @@ if __name__ == '__main__':
             with st.container():
                 with col_1:
                     st.header(f"Sequence {idx}:")
-                    st.write(list_seq) # exclude start/end in output
+                    st.text(list_seq) # exclude start/end in output
+                    #print(str(list_seq))
                 #with col_2:
                     #st.header(f"Translation {idx}:")
                     #st.write(list_trans)
