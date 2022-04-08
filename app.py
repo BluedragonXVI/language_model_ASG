@@ -68,7 +68,7 @@ if 'seq_samples' not in st.session_state:
 #cleaned_datasetseq = [seq.split() for seq in datasetseq]
 
 # MongoDB connection for sending userfeedback to 
-client = pymongo.MongoClient("mongodb+srv://stemmler:project@stemmlerproject.zqsgu.mongodb.net/StemmlerProject?retryWrites=true&w=majority&tlsAllowInvalidCertificates=true", tlsCAFile="lets-encrypt-r3.pem")
+client = pymongo.MongoClient("mongodb+srv://stemmler:project@stemmlerproject.zqsgu.mongodb.net/StemmlerProject?retryWrites=true&w=majority&tlsAllowInvalidCertificates=true", tlsCAFile=certifi.where())
 #db = client.test
 
 # Get the database URL for heroku postgres
