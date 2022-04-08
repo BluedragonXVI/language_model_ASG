@@ -71,7 +71,7 @@ client = pymongo.MongoClient("mongodb+srv://stemmler:project@stemmlerproject.zqs
 #db = client.test
 
 # Get the database URL for heroku postgres
-#DATABASE_URL = os.environ['DATABASE_URL'] # comment if testing locally
+DATABASE_URL = os.environ['DATABASE_URL'] # comment if testing locally
 
 # Get a unique session ID that can used at postgres primary key 
 def get_session_id() -> str:
@@ -131,8 +131,8 @@ my_translations = datasetseq
 if __name__ == '__main__':
  
     feedback_db = "user_feedback"
-    #engine = create_engine(DATABASE_URL, connect_args={'sslmode':'require'}) # uncomment along with line 38 for deployment
-    engine = create_engine('sqlite:///testDB.db') # comment when done with local changes
+    engine = create_engine(DATABASE_URL, connect_args={'sslmode':'require'}) # uncomment along with line 38 for deployment
+    #engine = create_engine('sqlite:///testDB.db') # comment when done with local changes
     mongo_db = client[feedback_db] # user_feedback DB that all feedback is sent to
     mongo_feedback_collection = mongo_db[session_id] # each person's session ID is used to create a collection inside the feedback DB
 
