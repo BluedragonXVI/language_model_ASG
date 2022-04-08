@@ -63,7 +63,7 @@ datasetseq = data
 
 dataset_len = len(datasetseq)
 if 'seq_samples' not in st.session_state:
-    st.session_state.seq_samples = random.sample(range(dataset_len-5), 3)
+    st.session_state.seq_samples = random.sample(range(dataset_len), 3)
 #cleaned_datasetseq = [seq.split() for seq in datasetseq]
 
 # MongoDB connection for sending userfeedback to 
