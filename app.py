@@ -18,6 +18,7 @@ import requests
 import math
 import os
 import re
+import certifi
 
 # Load NTDB-GPT-2 model through huggingface API
 API_URL = "https://api-inference.huggingface.co/models/dracoglacius/NTDB-GPT2"
@@ -67,7 +68,7 @@ if 'seq_samples' not in st.session_state:
 #cleaned_datasetseq = [seq.split() for seq in datasetseq]
 
 # MongoDB connection for sending userfeedback to 
-client = pymongo.MongoClient("mongodb+srv://stemmler:project@stemmlerproject.zqsgu.mongodb.net/StemmlerProject?retryWrites=true&w=majority")
+client = pymongo.MongoClient("mongodb+srv://stemmler:project@stemmlerproject.zqsgu.mongodb.net/StemmlerProject?retryWrites=true&w=majority", tlsCAFile=certifi.where())
 #db = client.test
 
 # Get the database URL for heroku postgres

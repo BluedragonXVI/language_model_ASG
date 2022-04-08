@@ -6,6 +6,7 @@ SQLAlchemy==1.3.22
 streamlit==1.3.0
 datasets
 pymongo
+certifi
 pymongo[srv]
 #transformers==4.13.0
 #torch
