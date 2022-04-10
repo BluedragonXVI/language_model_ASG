@@ -26,10 +26,6 @@ headers = {"Authorization": "Bearer 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"}
 
 eval_file = open("clinical_eval.json", 'r')
 data = json.loads(eval_file.read())
-data_labels = [val['label'] for val in data] # will be sent to database
-data = [val['seq'] for val in data]
-
-
 
 
 def query(payload):
@@ -37,8 +33,8 @@ def query(payload):
 	return response.json()
 
 # Get validation sequences path
-valid_seqs_name = "valid_noestart.txt"
-valid_seqs_path = os.path.join(os.getcwd(), valid_seqs_name)
+#valid_seqs_name = "valid_noestart.txt"
+#valid_seqs_path = os.path.join(os.getcwd(), valid_seqs_name)
 
 # Load ICD9 dictionaries for sequence translations
 dcode_dict_name = "dcode_dict.txt"
@@ -53,18 +49,22 @@ with open(pcode_dict_path, "rb") as fp:
     icd9_pcode_dict = pickle.load(fp)
 
 # Load validation dataset to sample/generate from
-start_idx = 0
-end_idx = 10
-datasets = load_dataset("text", data_files={"validation": valid_seqs_path})
-
+#start_idx = 0
+#end_idx = 10
+#datasets = load_dataset("text", data_files={"validation": valid_seqs_path})
 
 #datasetseq = list(datasets['validation'][:].values())[0]
 #datasetseq = datasetseq[:1000]
-datasetseq = data
 
-dataset_len = len(datasetseq)
-if 'seq_samples' not in st.session_state:
-    st.session_state.seq_samples = random.sample(range(dataset_len), 3)
+#dataset_len = len(datasetseq)
+if 'data' not in st.session_state:
+    st.session_state.data = [val for val in data]
+    random.shuffle(st.session_state.data)
+    st.session_state.labels = [val['label'] for val in st.session_state.data] # will be sent to database
+    st.session_state.seqs = [val['seq'] for val in st.session_state.data]
+    #st.session_state.rated_seqs = []
+    
+
 #cleaned_datasetseq = [seq.split() for seq in datasetseq]
 
 # MongoDB connection for sending userfeedback to 
@@ -102,6 +102,8 @@ def read_state_df(engine, session_id):
 
 # Retrieve session ID
 session_id = get_session_id()
+if 'mongo_data' not in st.session_state:
+    st.session_state.mongo_data = {session_id:[]}
 
 # Translation functions
 def translate_dpcode_seq(list_seq, pstart_idx, dcode_dict, pcode_dict):
@@ -124,7 +126,6 @@ def remove_period_from_seq_and_translate(list_seq, translations, dcode_dict, pco
     translation = translate_dpcode_seq(list_seq, pstart_idx, dcode_dict, pcode_dict)
     translations.append(translation)
 
-my_translations = datasetseq
 #for seq in cleaned_datasetseq:
 #    my_translations.append(seq[1:-1])
 #    remove_period_from_seq_and_translate(seq, my_translations, icd9_dcode_dict, icd9_pcode_dict)
@@ -132,7 +133,7 @@ my_translations = datasetseq
 if __name__ == '__main__':
  
     feedback_db = "user_feedback"
-    engine = create_engine(DATABASE_URL, connect_args={'sslmode':'require'}) # uncomment along with line 38 for deployment
+    engine = create_engine(DATABASE_URL, connect_args={'sslmode':'require'}) # uncomment along with line 75 for deployment
     #engine = create_engine('sqlite:///testDB.db') # comment when done with local changes
     mongo_db = client[feedback_db] # user_feedback DB that all feedback is sent to
     mongo_feedback_collection = mongo_db[session_id] # each person's session ID is used to create a collection inside the feedback DB
@@ -180,49 +181,69 @@ if __name__ == '__main__':
         ('Medical Student', 'Resident/Fellow', 'Attending'))
         st.subheader("Given the following stem consisting of an presenting injury (START) and diagnosis (DXS) do the following procedures (PRS) make clinical sense? Rate the 3 sequences below! (If no procedures are listed, is lack of surgical intervention a valid outcome?)\n")
         col_1, col_2 = st.columns(2)
-        rated_seqs = []
         #seq_samples = random.sample(range(dataset_len), 3)
         #for idx, seq in enumerate(st.session_state.seq_samples):
         #   st.session_state.seq_samples[idx] += 1
         #st.write(seq_samples)
-        idxs = []
-        for idx in st.session_state.seq_samples:
-            idxs.append(idx)
-            list_seq = my_translations[idx] 
+        #idxs = []
+        rated_seqs = []
+        for idx, seq in enumerate(st.session_state.seqs[:5],1):
+            #idxs.append(idx)
+            #list_seq = my_translations[idx] 
             #list_trans = my_translations[idx+1]
-            rated_seqs.append({"label:"+str(data_labels[idx])+"_seq_"+str(idx)+":":list_seq})
+            rated_seqs.append(str(st.session_state.labels[idx-1])+"_seq_:"+str(seq)+"_realistic_:")
             #rated_trans.append(list_trans)
             #input_seq = list_seq[:3]
             #input_seq = ' '.join(input_seq)
             with st.container():
                 with col_1:
                     st.header(f"Sequence {idx}:")
-                    st.text(list_seq) # exclude start/end in output
+                    st.text(seq) # exclude start/end in output
                     #print(str(list_seq))
                 #with col_2:
+                #    st.text(st.session_state.seqs[:5])
+                #    seq_1_plaus = st.checkbox("Realistic?")
+                #    seq_2_plaus = st.checkbox("Realistic?")
+                #    seq_3_plaus = st.checkbox("Realistic?")
+
                     #st.header(f"Translation {idx}:")
                     #st.write(list_trans)
-            
-        seq_1_plaus = st.slider(f"From a scale of 0-10, how plausible is sequence {idxs[0]}?", min_value=0,max_value=10)
-        seq_2_plaus = st.slider(f"From a scale of 0-10, how plausible is sequence {idxs[1]}?", min_value=0,max_value=10)
-        seq_3_plaus = st.slider(f"From a scale of 0-10, how plausible is sequence {idxs[2]}?", min_value=0,max_value=10)
-        data = {session_id:[clin_loe,seq_1_plaus,seq_2_plaus,seq_3_plaus]}
+        form = st.form("checkboxes", clear_on_submit = True)
+        with form:
+            seq_1_plaus = st.checkbox(f"Is sequence 1 realistic?")
+            seq_2_plaus = st.checkbox(f"Is sequence 2 realistic?")
+            seq_3_plaus = st.checkbox(f"Is sequence 3 realistic?")
+            seq_4_plaus = st.checkbox(f"Is sequence 4 realistic?")
+            seq_5_plaus = st.checkbox(f"Is sequence 5 realistic?")
+        submit = form.form_submit_button("Submit your answers")
+
         #write_state("size", data, engine, session_id)
         #size = int(read_state("size", engine, session_id))
 
-        if st.button("Submit"):
+        if submit:
+            rated_seqs[0] += str(seq_1_plaus)
+            rated_seqs[1] += str(seq_2_plaus)
+            rated_seqs[2] += str(seq_3_plaus)
+            rated_seqs[3] += str(seq_4_plaus)
+            rated_seqs[4] += str(seq_5_plaus)
+            st.session_state.mongo_data[session_id].extend(rated_seqs)
+            data = {'clin_LOE':clin_loe, 'rated_seqs':st.session_state.mongo_data[session_id]}
             df = pd.DataFrame(data)
-            write_state_df(df, engine, session_id + "_df")
-            mongo_data = {session_id:[clin_loe,seq_1_plaus,seq_2_plaus,seq_3_plaus,{"rated_seqs":rated_seqs}]}
+            write_state_df(df, engine, session_id + "_df") 
+            
 
             # Update with upsert to create new document if one doesn't exist
+            #{"all_feedback":st.session_state.mongodata}
             mongo_feedback_collection.update_one(
                 {}, # empty doc returns first doc in collection
-                {"$set": mongo_data},
+                {"$set": data},
                 upsert=True
             )
 
         #if not (read_state_df(engine, session_id + "_df").empty):
             #df = read_state_df(engine, session_id + "_df")
+            del st.session_state.seqs[:5]
+            del st.session_state.labels[:5]
+            st.experimental_rerun()
             st.success("Feedback successfully submitted!")
             st.write(df.astype(str))
